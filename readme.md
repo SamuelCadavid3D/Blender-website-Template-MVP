@@ -1,4 +1,4 @@
-# Three.js Journey
+# Blender Template test
 
 ## Setup
 Download [Node.js](https://nodejs.org/en/download/).
