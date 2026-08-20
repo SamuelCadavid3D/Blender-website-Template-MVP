@@ -24,7 +24,7 @@ const scene = new THREE.Scene();
 
 // 3D models
 
-const imported3DModels = {};
+const imported3DModels = [];
 const gltfLoader = new GLTFLoader();
 gltfLoader.load(
   "/Fox/glTF/Fox.gltf",
@@ -33,17 +33,67 @@ gltfLoader.load(
     console.log(gltf);
 
     mixer = new THREE.AnimationMixer(gltf.scene);
-    const action = mixer.clipAction(gltf.animations[2]);
+    const action = mixer.clipAction(gltf.animations[0]);
     console.log(action);
     action.play();
-    // while (gltf.scene.children.length) {
-    //   scene.add(gltf.scene.children[0]);
+
     gltf.scene.scale.set(0.025, 0.025, 0.025);
-    gltf.scene.position.y = -1;
-    gltf.scene.position.x = 1;
-    scene.add(gltf.scene);
-    let fox = gltf.scene;
-    imported3DModels.push(fox);
+
+    const parentCube = selectionMeshes[0];
+    if (!parentCube) return;
+
+    gltf.scene.position.set(0, 0, 0);
+    parentCube.add(gltf.scene);
+    imported3DModels.push(gltf.scene);
+  },
+  (progress) => {
+    console.log("progress");
+  },
+  (failed) => {
+    console.log("failed");
+  },
+);
+gltfLoader.load(
+  "/Duck/glTF/Duck.gltf",
+  (gltf) => {
+    // console.log("succes");
+    console.log(gltf);
+
+    gltf.scene.scale.set(1.025, 1, 1.025);
+
+    const parentCube = selectionMeshes[2];
+    if (!parentCube) return;
+
+    gltf.scene.position.set(0, 0, 0);
+    parentCube.add(gltf.scene);
+    imported3DModels.push(gltf.scene);
+  },
+  (progress) => {
+    console.log("progress");
+  },
+  (failed) => {
+    console.log("failed");
+  },
+);
+gltfLoader.load(
+  "/Fox/glTF/Fox.gltf",
+  (gltf) => {
+    // console.log("succes");
+    console.log(gltf);
+
+    mixer = new THREE.AnimationMixer(gltf.scene);
+    const action = mixer.clipAction(gltf.animations[1]);
+    console.log(action);
+    action.play();
+
+    gltf.scene.scale.set(0.025, 0.025, 0.025);
+
+    const parentCube = selectionMeshes[1];
+    if (!parentCube) return;
+
+    gltf.scene.position.set(0, 0, 0);
+    parentCube.add(gltf.scene);
+    imported3DModels.push(gltf.scene);
   },
   (progress) => {
     console.log("progress");
@@ -66,7 +116,7 @@ scene.add(keyLight);
 
 debugObject.startingDistance = 3.75;
 debugObject.objectDistance = 3;
-debugObject.amount = 4;
+debugObject.amount = 3;
 gui.add(debugObject, "amount").step(1).min(0).max(15).onChange("to be done");
 const selectionMeshes = [];
 
@@ -150,7 +200,7 @@ let currentSection = 0;
 
 window.addEventListener("scroll", () => {
   scrollY = window.scrollY;
-  camera.position.y = -(scrollY / sizes.height) * 2;
+  camera.position.y = -(scrollY / sizes.height) * 3;
 });
 
 /**
@@ -169,7 +219,7 @@ const tick = () => {
   }
 
   selectionMeshes.forEach((cube, index) => {
-    cube.rotation.x = 0.1 * elapsedTime + index * 0.05;
+    cube.rotation.x = 0.01 * elapsedTime + index * 0.05;
     cube.rotation.y = 0.12 * elapsedTime + index * 0.05;
   });
 
