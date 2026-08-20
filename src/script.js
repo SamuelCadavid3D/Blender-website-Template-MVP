@@ -23,21 +23,27 @@ const canvas = document.querySelector("canvas.webgl");
 const scene = new THREE.Scene();
 
 // 3D models
+
+const imported3DModels = {};
 const gltfLoader = new GLTFLoader();
 gltfLoader.load(
-  "Fox/glTF/Fox.gltf",
+  "/Fox/glTF/Fox.gltf",
   (gltf) => {
     // console.log("succes");
     console.log(gltf);
 
     mixer = new THREE.AnimationMixer(gltf.scene);
-    const action = mixer.clipAction(gltf.animations[0]);
+    const action = mixer.clipAction(gltf.animations[2]);
     console.log(action);
     action.play();
     // while (gltf.scene.children.length) {
     //   scene.add(gltf.scene.children[0]);
     gltf.scene.scale.set(0.025, 0.025, 0.025);
+    gltf.scene.position.y = -1;
+    gltf.scene.position.x = 1;
     scene.add(gltf.scene);
+    let fox = gltf.scene;
+    imported3DModels.push(fox);
   },
   (progress) => {
     console.log("progress");
@@ -46,6 +52,13 @@ gltfLoader.load(
     console.log("failed");
   },
 );
+
+const ambientLight = new THREE.HemisphereLight(0xffffff, 0x444444, 2);
+scene.add(ambientLight);
+
+const keyLight = new THREE.DirectionalLight(0xffffff, 3);
+keyLight.position.set(2, 3, 4);
+scene.add(keyLight);
 
 /**
  * Website Generator
@@ -127,6 +140,7 @@ const renderer = new THREE.WebGLRenderer({
   canvas: canvas,
   alpha: true,
 });
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
@@ -136,7 +150,7 @@ let currentSection = 0;
 
 window.addEventListener("scroll", () => {
   scrollY = window.scrollY;
-  camera.position.y = -(scrollY / sizes.height) * 3;
+  camera.position.y = -(scrollY / sizes.height) * 2;
 });
 
 /**
