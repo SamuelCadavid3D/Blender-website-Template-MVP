@@ -25,6 +25,19 @@ const scene = new THREE.Scene();
 // 3D models
 
 const imported3DModels = [];
+
+function centerModelInParent(model, parent) {
+  parent.add(model);
+  model.position.set(0, 0, 0);
+  model.updateMatrixWorld(true);
+
+  const bounds = new THREE.Box3().setFromObject(model);
+  const worldCenter = bounds.getCenter(new THREE.Vector3());
+  const parentCenter = parent.worldToLocal(worldCenter);
+
+  model.position.sub(parentCenter);
+}
+
 const gltfLoader = new GLTFLoader();
 gltfLoader.load(
   "/Fox/glTF/Fox.gltf",
@@ -37,13 +50,12 @@ gltfLoader.load(
     console.log(action);
     action.play();
 
-    gltf.scene.scale.set(0.025, 0.025, 0.025);
+    gltf.scene.scale.set(0.015, 0.015, 0.015);
 
     const parentCube = selectionMeshes[0];
     if (!parentCube) return;
 
-    gltf.scene.position.set(0, 0, 0);
-    parentCube.add(gltf.scene);
+    centerModelInParent(gltf.scene, parentCube);
     imported3DModels.push(gltf.scene);
   },
   (progress) => {
@@ -59,14 +71,33 @@ gltfLoader.load(
     // console.log("succes");
     console.log(gltf);
 
-    gltf.scene.scale.set(1.025, 1, 1.025);
+    gltf.scene.scale.set(0.7, 0.7, 0.7);
 
     const parentCube = selectionMeshes[2];
     if (!parentCube) return;
 
-    gltf.scene.position.set(0, 0, 0);
-    parentCube.add(gltf.scene);
+    centerModelInParent(gltf.scene, parentCube);
     imported3DModels.push(gltf.scene);
+  },
+  (progress) => {
+    console.log("progress");
+  },
+  (failed) => {
+    console.log("failed");
+  },
+);
+let gameBoy = null;
+gltfLoader.load(
+  "nintendo_game_boy_original_1989.glb",
+  (gltf) => {
+    // console.log("succes");
+    gameBoy = gltf.scene;
+    console.log(gltf);
+    let size = 10;
+    gltf.scene.scale.set(size, size, size);
+    gltf.scene.position.x = 1;
+
+    scene.add(gltf.scene);
   },
   (progress) => {
     console.log("progress");
@@ -86,13 +117,12 @@ gltfLoader.load(
     console.log(action);
     action.play();
 
-    gltf.scene.scale.set(0.025, 0.025, 0.025);
+    gltf.scene.scale.set(0.015, 0.015, 0.015);
 
     const parentCube = selectionMeshes[1];
     if (!parentCube) return;
 
-    gltf.scene.position.set(0, 0, 0);
-    parentCube.add(gltf.scene);
+    centerModelInParent(gltf.scene, parentCube);
     imported3DModels.push(gltf.scene);
   },
   (progress) => {
@@ -117,8 +147,8 @@ scene.add(keyLight);
 debugObject.startingDistance = 3.75;
 debugObject.objectDistance = 3;
 debugObject.amount = 3;
-gui.add(debugObject, "amount").step(1).min(0).max(15).onChange("to be done");
 const selectionMeshes = [];
+const websiteSections = [];
 
 const material = new THREE.MeshBasicMaterial({ wireframe: true });
 
@@ -126,20 +156,41 @@ const websiteGenerator = function () {
   for (let i = 0; i < debugObject.amount; i++) {
     // Html duplication part
     const duplicateTemplate = template1.cloneNode(true);
+    duplicateTemplate.style.display = "grid";
     document.body.appendChild(duplicateTemplate);
-    template1.style.display = "grid";
+    websiteSections.push(duplicateTemplate);
 
     // cube adding part
-    const cubeDistance = -debugObject.objectDistance * i;
-    const finalDistance = cubeDistance - debugObject.startingDistance;
-
     const cube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material);
 
-    cube.position.set(-1.5, finalDistance, 0);
+    cube.position.set(-1.5, 0, 0);
     scene.add(cube);
     selectionMeshes.push(cube);
   }
 };
+
+const regenerateWebsite = () => {
+  websiteSections.forEach((section) => section.remove());
+  websiteSections.length = 0;
+
+  selectionMeshes.forEach((mesh) => {
+    scene.remove(mesh);
+    mesh.traverse((child) => {
+      if (child.isMesh) child.geometry.dispose();
+    });
+  });
+  selectionMeshes.length = 0;
+
+  websiteGenerator();
+  positionMeshesAtSectionCenters();
+};
+
+gui
+  .add(debugObject, "amount")
+  .step(1)
+  .min(0)
+  .max(15)
+  .onChange(regenerateWebsite);
 
 websiteGenerator();
 
@@ -149,6 +200,21 @@ websiteGenerator();
 const sizes = {
   width: window.innerWidth,
   height: window.innerHeight,
+};
+
+const positionMeshesAtSectionCenters = () => {
+  websiteSections.forEach((section, index) => {
+    const mesh = selectionMeshes[index];
+    if (!mesh) return;
+
+    const bounds = section.getBoundingClientRect();
+    const sectionCenter = bounds.top + window.scrollY + bounds.height / 2;
+    const viewportCenter = sizes.height / 2;
+
+    mesh.position.y =
+      -((sectionCenter - viewportCenter) / sizes.height) *
+      debugObject.objectDistance;
+  });
 };
 
 window.addEventListener("resize", () => {
@@ -163,7 +229,10 @@ window.addEventListener("resize", () => {
   // Update renderer
   renderer.setSize(sizes.width, sizes.height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  positionMeshesAtSectionCenters();
 });
+
+positionMeshesAtSectionCenters();
 
 /**
  * Camera
@@ -179,9 +248,26 @@ camera.position.set(0, 0, 3);
 camera.lookAt(0, 0, 0);
 scene.add(camera);
 
+const cameraGroup = new THREE.Group();
+scene.add(cameraGroup);
+
+cameraGroup.add(camera);
+
 // Controls
 // const controls = new OrbitControls(camera, canvas);
 // controls.enableDamping = true;
+
+const cursor = {};
+cursor.x = 0;
+cursor.y = 0;
+
+debugObject.cameraSensibility = 2;
+window.addEventListener("mousemove", function (event) {
+  cursor.x =
+    (event.clientX / sizes.width - 0.25) / debugObject.cameraSensibility;
+  cursor.y =
+    (event.clientY / sizes.height - 0.25) / debugObject.cameraSensibility;
+});
 
 /**
  * Renderer
@@ -200,14 +286,14 @@ let currentSection = 0;
 
 window.addEventListener("scroll", () => {
   scrollY = window.scrollY;
-  camera.position.y = -(scrollY / sizes.height) * 3;
+  camera.position.y = -(scrollY / sizes.height) * debugObject.objectDistance;
 });
 
 /**
  * Animate
  */
 const clock = new THREE.Clock();
-let previousTime;
+let previousTime = 0;
 const tick = () => {
   const elapsedTime = clock.getElapsedTime();
   const deltaTime = elapsedTime - previousTime;
@@ -219,9 +305,24 @@ const tick = () => {
   }
 
   selectionMeshes.forEach((cube, index) => {
-    cube.rotation.x = 0.01 * elapsedTime + index * 0.05;
+    // cube.rotation.x = 0.01 * elapsedTime + index * 0.05;
     cube.rotation.y = 0.12 * elapsedTime + index * 0.05;
   });
+
+  // animate camera
+  camera.position.y = (-scrollY / sizes.height) * debugObject.objectDistance;
+
+  const parallaxX = cursor.x * 0.5;
+  const parallaxY = -cursor.y * 0.5;
+  cameraGroup.position.x +=
+    (parallaxX - cameraGroup.position.x) * 5 * deltaTime;
+  cameraGroup.position.y +=
+    (parallaxY - cameraGroup.position.y) * 5 * deltaTime;
+
+  if (gameBoy) {
+    gameBoy.rotation.y = elapsedTime * 0.052;
+    gameBoy.rotation.x = elapsedTime * 0.05;
+  }
 
   // Render
   renderer.render(scene, camera);
